@@ -173,7 +173,7 @@ def create_required_json_files() -> None:
     function to create requires json files
     """
     if check_filepath_exists(DATA_JSON_PATH):
-        create_directory_if_not_exist("quick_tickets_json")
+        create_directory_if_not_exist(BASE_JSON_DIR)
         write_json(DATA_JSON_PATH, DATA_JSON_FORMAT)
 
 
