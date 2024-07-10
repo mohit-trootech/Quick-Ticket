@@ -29,11 +29,11 @@ class DataNotFound(BaseException):
         super(DataNotFound, self).__init__(msg)
 
 
-class UnderAge(BaseException):
+class Ineligible(BaseException):
     """custom exception for tickets unavailable"""
 
     def __init__(self, msg):
-        super(UnderAge, self).__init__(msg)
+        super(Ineligible, self).__init__(msg)
 
 
 class DateValidationError(BaseException):
@@ -41,7 +41,3 @@ class DateValidationError(BaseException):
 
     def __init__(self, msg):
         super(DateValidationError, self).__init__(msg)
-
-
-if __name__ == "__main__":
-    pass

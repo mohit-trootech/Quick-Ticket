@@ -1,7 +1,6 @@
 """User Signup and Signin class Logic"""
 
 from constant import (
-    ROLE,
     ROLE_HOST,
     ROLE_WATCHER,
     USER_JSON,
@@ -9,13 +8,23 @@ from constant import (
     USER_NOT_EXIST,
     WELCOME,
     AUTHENTICATE_ERROR,
+    AUTHORIZE_ERROR,
+    INELIGIBLE_ERROR,
     DATA_JSON_PATH,
+    USER_INFORMATION_MSG,
+    PASSWORD_INPUT,
+    USER_ROLE_INPUT,
+    NAME_INPUT,
+    AGE_INPUT,
+    EMAIL_INPUT,
+    USER_CREATED,
 )
-from exceptions import AuthenticationError, UnderAge
+from exceptions import AuthenticationError, Ineligible, AuthorizationError
+from enums import UserRole
 from utils import (
     custom_print_msg,
     read_json,
-    update_main_theater_data,
+    update_main_data,
     user_input,
     user_input_int_type,
     password_hash,
@@ -39,21 +48,24 @@ class User:
         method to implement signup process
         @return:
         """
-        custom_print_msg("Please Enter User Information")
-        password = password_hash(input("Enter Your Password: "))
-        role = user_input_int_type(f"Please Select User Role {ROLE}: ")
-        if int(role) == 1:
-            role = ROLE_HOST
-        else:
-            role = ROLE_WATCHER
-        name = user_input("Enter Name: ")
-        age = user_input_int_type("Enter Age: ")
+        custom_print_msg(USER_INFORMATION_MSG)
+        password = password_hash(input(PASSWORD_INPUT))
+        print(
+            "Available Roles\n"
+            f"{ROLE_HOST.value}: {ROLE_HOST.name}\n"
+            f"{ROLE_WATCHER.value}: {ROLE_WATCHER.name}"
+        )
+        role = UserRole(user_input_int_type(USER_ROLE_INPUT))
+        if role not in [ROLE_HOST, ROLE_WATCHER]:
+            raise AuthorizationError(AUTHORIZE_ERROR)
+        name = user_input(NAME_INPUT)
+        age = user_input_int_type(AGE_INPUT)
         if age < 18:
-            raise UnderAge("You are Under Age to Book Tickets Required 18 plus")
-        email = user_input("Enter Email: ")
-        status = self.insert_signup_information(password, name, int(age), email, role)
-        if status:
-            custom_print_msg("User Created Successfully")
+            raise Ineligible(INELIGIBLE_ERROR)
+        email = user_input(EMAIL_INPUT)
+        self.insert_signup_information(
+            password=password, name=name, age=int(age), email=email, role=role.name
+        )
 
     def is_user_exist(self) -> None:
         """
@@ -61,45 +73,31 @@ class User:
         @return: None
         """
         data = read_json(DATA_JSON_PATH)
-        if not data.get(USER_JSON).get(self.username):
+        if not data.get(USER_JSON.name).get(self.username):
             custom_print_msg(USER_NOT_EXIST)
             self.sign_up()
             return
-        else:
-            custom_print_msg(USER_EXIST.format(username=self.username.capitalize()))
-            self.sign_in()
+        custom_print_msg(USER_EXIST.format(username=self.username.capitalize()))
+        self.sign_in()
 
-    def insert_signup_information(
-        self, password: str, name: str, age: int, email: str, role: str
-    ) -> bool:
+    def insert_signup_information(self, date_type: str, **user_signup_data) -> None:
         """
         method to insert data into json
-        @param  password:str
-        @param name:str
-        @param age:int
-        @param email:str
-        @param role:str
-        @return:bool
+        @param date_type: str
+        @param  user_signup_data:dict
         """
-
-        data_for_append = {
-            "username": self.username,
-            "password": password,
-            "name": name,
-            "age": age,
-            "email": email,
-            "role": role,
-        }
-        update_main_theater_data(self.username, data_for_append, USER_JSON)
-        return True
+        update_main_data(
+            self.username, date_type, user_signup_dataupdate_main_theater_data
+        )
+        custom_print_msg(USER_CREATED)
 
     def sign_in(self):
         """
         method to implement signup process
         @return: None
         """
-        data = read_json(DATA_JSON_PATH).get(USER_JSON).get(self.username)
-        password = input("Enter Your Password: ")
+        data = read_json(DATA_JSON_PATH).get(USER_JSON.name).get(self.username)
+        password = input(PASSWORD_INPUT)
         if data.get("username") == self.username and data.get(
             "password"
         ) == password_hash(password):

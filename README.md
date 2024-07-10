@@ -14,6 +14,7 @@ system operations.
 - Real-time update of Json File
 - Date slots are based on current date
 - Time slots are based on current time
+- Password Encryption using sha-256
 
 ## Documentation Reference
 

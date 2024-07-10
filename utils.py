@@ -15,6 +15,12 @@ from constant import (
     BASE_JSON_DIR,
     TRANSACTION_FILENAME_FORMAT,
     DATE_VALIDATION_ERROR,
+    MOVIE_UNAVAILABLE,
+    QUANTITY_INPUT,
+    TICKETS_UNAVAILABLE,
+    DATE_INPUT,
+    MONTH_INPUT,
+    YEAR_INPUT,
 )
 from exceptions import UnavailableTickets, DateValidationError
 
@@ -34,7 +40,6 @@ def custom_print_msg(msg: str) -> None:
     """
     Custom Function for Special Print Functionality
     @param msg:str
-    @return:None
     """
     print(msg.center(50, "~"))
 
@@ -82,7 +87,6 @@ def create_directory_if_not_exist(directory_path: str) -> None:
     """
     function to create a directory if not exist using os module
     @param directory_path: str
-    @return:None
     """
     if check_filepath_exists(directory_path):
         os.mkdir(directory_path)
@@ -95,6 +99,15 @@ def create_file_path(*args) -> str:
     @return: str
     """
     return os.path.join(*args)
+
+
+def create_counter_of_sequences(*args) -> dict:
+    """
+    return counter from available list object
+    @param args: *args
+    @return: dict
+    """
+    return dict(enumerate(*args, 1))
 
 
 def read_json(file_path: str) -> dict:
@@ -112,31 +125,52 @@ def write_json(file_path: str, data: dict) -> dict:
     function to write json file
     @param file_path: str
     @param data: dict
-    @return: None
     """
     with open(file_path, "w") as fp:
         return json.dump(data, fp, indent=5)
 
 
-def update_main_theater_data(
-    key_name: str, data_for_append: dict, data_type: str
-) -> None:
+def update_main_data(key_name: str, data_for_append: dict, data_type: str) -> None:
     """
     function to update main theater data into json file
     @param key_name:str
     @param data_for_append: dict
     @param data_type: str
-    @return: None
     """
     data = read_json(DATA_JSON_PATH)
     data.get(data_type)[key_name] = data_for_append
     write_json(DATA_JSON_PATH, data)
 
 
+def print_movie_data(movie_data: dict) -> None:
+    """
+    function to print movie Data
+    @param movie_data:dict
+    """
+    print(
+        f"Movie Name: {movie_data.get('name')}\n"
+        f"Actor Name: {movie_data.get('actor')}\n"
+        f"Actress Name: {movie_data.get('actress')}\n"
+        f"Duration: {movie_data.get('duration')}\n"
+        f"Ticket Price: 100 Rs"
+    )
+    if movie_data.get("end_date") < str(date.today()):
+        print(MOVIE_UNAVAILABLE)
+
+
+def print_counter_data_information(data: dict) -> None:
+    """
+    function to print Counter Data Information
+    @param data:dict
+    """
+    print("Available Options")
+    for key, value in data.items():
+        print(f"{key}: {value}")
+
+
 def create_required_json_files() -> None:
     """
     function to create requires json files
-    @return: None
     """
     if check_filepath_exists(DATA_JSON_PATH):
         create_directory_if_not_exist("quick_tickets_json")
@@ -151,41 +185,14 @@ def create_user_transactions_json_file(username: str):
         write_json(file_path, {})
 
 
-def map_user_transaction_data(*args):
-    keys = [
-        "username",
-        "movie_name",
-        "date_slot",
-        "time_slot",
-        "ticket_quantity",
-        "total_amount",
-    ]
-    return dict(zip(keys, args))
-
-
-def user_transactions_update(
-    username: str,
-    movie_name: str,
-    date_slot: str,
-    time_slot: str,
-    ticket_quantity: int,
-    total_amount: int,
-) -> None:
+def user_transactions_update(**user_data) -> None:
     """
     function to write user transactions
-    @param username:str
-    @param movie_name:str
-    @param date_slot:str
-    @param time_slot:str
-    @param ticket_quantity:int
-    @param total_amount:int
-    @return:None
+    @param user_data: dict
     """
     file_path = create_file_path(
-        BASE_JSON_DIR, TRANSACTION_FILENAME_FORMAT.format(username=username)
-    )
-    data = map_user_transaction_data(
-        username, movie_name, date_slot, time_slot, ticket_quantity, total_amount
+        BASE_JSON_DIR,
+        TRANSACTION_FILENAME_FORMAT.format(username=user_data.get("username")),
     )
     if not check_filepath_exists(file_path):
         transactions_data = read_json(file_path)
@@ -194,9 +201,10 @@ def user_transactions_update(
             last_key += 1
         except IndexError:
             last_key = 1
-        transactions_data.setdefault(last_key, data)
+        transactions_data.setdefault(last_key, user_data)
         file_path = create_file_path(
-            BASE_JSON_DIR, TRANSACTION_FILENAME_FORMAT.format(username=username)
+            BASE_JSON_DIR,
+            TRANSACTION_FILENAME_FORMAT.format(username=user_data.get("username")),
         )
         write_json(file_path, transactions_data)
 
@@ -212,24 +220,23 @@ def check_ticket_quantity(available_ticket: int) -> int:
         exit()
     tries = 3
     while True:
-        ticket_quantity = user_input_int_type("Select Ticket Quantity: ")
+        ticket_quantity = user_input_int_type(QUANTITY_INPUT)
         if ticket_quantity <= available_ticket:
             return ticket_quantity
         elif tries == 0:
-            raise UnavailableTickets("Try Booking the Tickets the are Available")
+            raise UnavailableTickets(TICKETS_UNAVAILABLE)
         else:
             print(TICKET_QUANTITY_CHECK.format(tries=tries))
             tries -= 1
 
 
-def get_date() -> date:
+def get_date():
     """
     function to return date object
-    @return: date
     """
-    d = int(input("Enter Date[1-31]: "))
-    m = int(input("Enter Month[1-12]: "))
-    y = int(input("Enter Year: "))
+    d = int(input(DATE_INPUT))
+    m = int(input(MONTH_INPUT))
+    y = int(input(YEAR_INPUT))
     return date(y, m, d)
 
 
@@ -238,7 +245,7 @@ def generate_slots(duration: int, seats: int) -> dict:
     function to generate slots: seats respectively
     @param duration: int
     @param seats: int
-    @return:
+    @return: dict
     """
     duration = str(duration) + "min"
     datetime_slots = pandas.date_range(
@@ -247,16 +254,13 @@ def generate_slots(duration: int, seats: int) -> dict:
     return dict.fromkeys(datetime_slots, seats)
 
 
-def create_time_slots(
-    start_date: date, end_date: date, duration: int, seats: int
-) -> dict:
+def create_time_slots(start_date, end_date, duration: int, seats: int) -> dict:
     """
     function to create time slots based on given start and end date
     @param seats: int
     @param duration: int
     @param start_date: date
     @param end_date: ate
-    @return: dict
     """
     slots = {}
     slots_seats_data = generate_slots(duration, seats)
@@ -266,20 +270,22 @@ def create_time_slots(
     return slots
 
 
-def generate_movie_list_based_on_date(movie_date: dict) -> list:
+def generate_movie_list_based_on_date(movie_data: dict) -> list:
     """
     function to return movie list enumerate object based on date
-    @param movie_date: dict
+    @param movie_data: dict
     @return:list
     """
     upcoming_movie = []
     past_movies = []
-    for key, value in movie_date.items():
-        if str(date.today()) <= value.get("end_date"):
-            upcoming_movie.append(key)
+    for movie_name, movie_data in movie_data.items():
+        if str(date.today()) <= movie_data.get("end_date"):
+            upcoming_movie.append(movie_name)
         else:
-            past_movies.append(key)
-    return [upcoming_movie, past_movies]
+            past_movies.append(movie_name)
+    return create_counter_of_sequences(upcoming_movie), create_counter_of_sequences(
+        past_movies
+    )
 
 
 def get_available_date_slots(date_slots: dict) -> dict:
@@ -290,9 +296,9 @@ def get_available_date_slots(date_slots: dict) -> dict:
     """
     counter = 1
     date_slot_counter = {}
-    for key in date_slots.keys():
-        if str(date.today()) <= key:
-            date_slot_counter[counter] = key
+    for dt in date_slots.keys():
+        if str(date.today()) <= dt:
+            date_slot_counter[counter] = dt
             counter += 1
     return date_slot_counter
 
@@ -306,13 +312,13 @@ def get_available_time_slots(slots: dict, date_slot: str) -> dict:
     """
     counter = 1
     available_slots_counter = {}
-    for key in slots.keys():
+    for slot in slots.keys():
         if date_slot == str(date.today()):
-            if datetime.now().strftime("%H:%M") <= key:
-                available_slots_counter.setdefault(counter, key)
+            if datetime.now().strftime("%H:%M") <= slot:
+                available_slots_counter[counter] = slot
                 counter += 1
         else:
-            available_slots_counter.setdefault(counter, key)
+            available_slots_counter[counter] = slot
             counter += 1
     return available_slots_counter
 
@@ -322,7 +328,6 @@ def check_dates_validity(start_date: str, end_date: str) -> None:
     function to check date validity start date must less than end date
     @param start_date:str
     @param end_date: str
-    @return:None
     """
     if start_date > end_date:
         raise DateValidationError(DATE_VALIDATION_ERROR)
